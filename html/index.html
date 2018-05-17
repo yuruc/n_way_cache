@@ -1,0 +1,770 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>N-way Set-associative Cache &#8212; N-Way Associative Cache  documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">N-Way Associative Cache  documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="n-way-set-associative-cache">
+<h1>N-way Set-associative Cache<a class="headerlink" href="#n-way-set-associative-cache" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<span class="target" id="module-cache"></span><p>Implementation of N-way Set-associative cache</p>
+<p>author: Yu-Ju Chang</p>
+<p>This module serves as a in-memory  N-way Set-associative cache which user could use to store items(key and value pairs) and quickly access them. The type of the keys and values could be any type but all the keys and all the values should be the same type.</p>
+<p>Set-associative cache is used in hardware implementation, yet here the module provides a software simulation of it. For details of Set-associative cache, see here:</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Cache_Placement_Policies#Set_Associative_Cache">https://en.wikipedia.org/wiki/Cache_Placement_Policies#Set_Associative_Cache</a></p>
+<p>Input values:
+Several values are needed for using this cache module. 
+They are cache_size, n_way, b, key_type, value_type.</p>
+<p>cache_size (int): <cite>cache_size</cite> is the size of the cache we can use to save items.       if cache size == n, it means we can store at most n items.      cache size should be larger than n_ways * number of sets        * offset size.</p>
+<p>n_way(int): <cite>n_way</cite> is used to specify how many ways/lines in a         cache set.</p>
+<p>b(int): <cite>b</cite> is used to calculate offset size. offset size is 2^b.</p>
+<p>key_type and value_type could be any type but all keys should   be the same type and so do all values.</p>
+<p>Following values are optional. Users are free to use.</p>
+<p>replacement(<a class="reference internal" href="#cache.ReplacementPolicy" title="cache.ReplacementPolicy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ReplacementPolicy</span></code></a>, optional): <cite>replacement</cite> is to set the cache      replacement policy. User could either to pass a subclass of     <cite>ReplacementPolicy</cite> or pass a string to specify the <cite>LRU</cite> or <cite>MRU</cite> policy.      Default setting is <cite>LRU</cite>.</p>
+<blockquote>
+<div><p>For details about LRU, see here:</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Cache_replacement_policies#LRU">https://en.wikipedia.org/wiki/Cache_replacement_policies#LRU</a></p>
+<p>For details about MRU, see here:</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Cache_replacement_policies#Most_recently_used_(MRU">https://en.wikipedia.org/wiki/Cache_replacement_policies#Most_recently_used_(MRU</a>)</p>
+</div></blockquote>
+<p>hash(:func:, optional): <cite>hash</cite> is to provide the hash function that used to hash keys   of the items. Default setting is to use python’s built-in hash function.</p>
+<p>thread_safe_mode(bool, optional): when <cite>thread_safe_mode</cite> == True, means the         class is thread safe, One thing must be noted is that thread safe mode will         have worse performance regrading of time since lock is costly. Default         setting is True (enable thread safe mode).</p>
+<p>Operations:
+The cache module provide three operations.</p>
+<ol class="arabic">
+<li><p class="first">set_value(key, value): users could put items(key and value pairs) into the cache.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>The key will be hash with the provided hash function, and then get set  number, offset index and tag from the hashed result. First need to check        if all of the lines of the set is full and if any line has the same tag.         </dt>
+<dd><ol class="first last loweralpha simple">
+<li>if the one line has the same tag, replace/put the item into                 correspond offset directly</li>
+<li>if full, choose one line to evict based on evict policy</li>
+<li>if not full, place it into a new line and update the new line</li>
+</ol>
+</dd>
+</dl>
+<p>If there is any collision of key, then the old item will be replaced    directly.
+Replacement policy object should be updated under all of the situations.</p>
+</div></blockquote>
+</li>
+<li><dl class="first docutils">
+<dt>get_value(key): users could get items(key and value pairs) from the cache.</dt>
+<dd><dl class="first docutils">
+<dt>The key will be hash with the provided hash function, and then get set  number, offset index and tag from the hashed result. First need to check        if it is valid(tag matches means it is valid), if it’s valid, we then check     the offset index.</dt>
+<dd><ol class="first last loweralpha simple">
+<li>if it is not in the cache, throw an exception</li>
+<li>if in the cache, return the object and adjust current replacement             policy object.</li>
+</ol>
+</dd>
+</dl>
+<p class="last">Replacement policy object should be updated under all of the situations.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>delete(key, value): users could delete items(key and value pairs)    from the cache.</dt>
+<dd><dl class="first docutils">
+<dt>Similiar to get_value and set_value, the key will be hash with the      provided hash function, and then get set number, offset index and tag   from the hashed result. if tag matches: </dt>
+<dd><ol class="first last loweralpha simple">
+<li>if the item not in the cache, do nothing</li>
+<li>if in the cache, delete the object and adjust current replacement                 policy object.</li>
+</ol>
+</dd>
+</dl>
+<p class="last">Replacement policy object should be updated under all of the situations.</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>Test: Please see cache_test.py to see the unit test code.</p>
+<dl class="docutils">
+<dt>Usage:</dt>
+<dd><p class="first">To use the module, start with following lines:</p>
+<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cache</span> 
+<span class="n">cache_size</span><span class="p">,</span> <span class="n">n_way</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span> 
+<span class="n">key_type</span><span class="p">,</span> <span class="n">value_type</span> <span class="o">=</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span>
+<span class="c1">#initialize the cache with your own setting</span>
+<span class="n">test_cache</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">Cache</span><span class="p">(</span><span class="n">cache_size</span><span class="p">,</span> <span class="n">n_way</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">key_type</span><span class="p">,</span> <span class="n">value_type</span><span class="p">)</span>
+<span class="n">test_cache</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> 
+<span class="n">value</span> <span class="o">=</span> <span class="n">test_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> 
+<span class="n">test_cache</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+<dt>Example use case:</dt>
+<dd>An in-memory cache could be used on an application server to store data         associated with user id, so we could avoid to get data from database    for every request.</dd>
+</dl>
+<div class="section" id="overview-of-classes">
+<h2>Overview of Classes<a class="headerlink" href="#overview-of-classes" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#cache.Cache" title="cache.Cache"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Cache</span></code></a>(cache_size,&nbsp;n_way,&nbsp;b,&nbsp;key_type,&nbsp;value_type)</td>
+<td>Cache class serves as a cache to store cache sets, each cache  set will have cache lines to store items (a key &amp; value pair).</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#cache.CacheSet" title="cache.CacheSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheSet</span></code></a>(n_way,&nbsp;offset_size[,&nbsp;replacement,&nbsp;…])</td>
+<td>CacheSet class serves as a cache set in a cache to store cache  lines, and each cache line will store items (a key &amp; value pair).</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#cache.CacheLine" title="cache.CacheLine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheLine</span></code></a>(offset_size[,&nbsp;tag,&nbsp;thread_safe_mode])</td>
+<td>CacheLine class serves as a cache line in the cache.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#cache.LRU_MRU" title="cache.LRU_MRU"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LRU_MRU</span></code></a>([policy,&nbsp;thread_safe_mode])</td>
+<td>LRU_MRU class keep the accessed order and quick get the cache lines for         the needs of LRU/MRU policy.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#cache.ReplacementPolicy" title="cache.ReplacementPolicy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ReplacementPolicy</span></code></a></td>
+<td>ReplacementPolicy class is an interface to allow user to        inherit and implement their own replacement policy.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#cache.Node" title="cache.Node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a>(tag,&nbsp;index)</td>
+<td>Node class is a node used in implementation of doubly linked list.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#cache.DoublyLinkedList" title="cache.DoublyLinkedList"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DoublyLinkedList</span></code></a>([thread_safe_mode])</td>
+<td>DoublyLinkedList class is a doubly linkedlist used in implementation    of LRU/MRU policy.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="cache">
+<h2>Cache<a class="headerlink" href="#cache" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cache.Cache">
+<em class="property">class </em><code class="descclassname">cache.</code><code class="descname">Cache</code><span class="sig-paren">(</span><em>cache_size</em>, <em>n_way</em>, <em>b</em>, <em>key_type</em>, <em>value_type</em>, <em>replacement=None</em>, <em>hash=&lt;built-in function hash&gt;</em>, <em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Cache class serves as a cache to store cache sets, each cache 
+set will have cache lines to store items (a key &amp; value pair).</p>
+<dl class="method">
+<dt id="cache.Cache.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>cache_size</em>, <em>n_way</em>, <em>b</em>, <em>key_type</em>, <em>value_type</em>, <em>replacement=None</em>, <em>hash=&lt;built-in function hash&gt;</em>, <em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The __init__ method of a cache is used to initialize a cache.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">cache_size (int): <cite>cache_size</cite> is the cache size we can use to save                             items. if cache size == n, it means we can store at most n items.                               cache size should be larger than n_ways * number of sets *                              * offset size.</p>
+<p>n_way(int): <cite>n_way</cite> is used to specify how many ways/lines in a                                 cache set.</p>
+<p>b(int): <cite>b</cite> is used to calculate offset size. offset size is 2^b.</p>
+<p>key_type(key_type): <cite>key_type</cite> is used to specifiy the key type of                              the item.</p>
+<p>value_type(value_type): <cite>value_type</cite> is used to specifiy the key type                           of the item.</p>
+<p>replacement(<a class="reference internal" href="#cache.ReplacementPolicy" title="cache.ReplacementPolicy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ReplacementPolicy</span></code></a>, optional): <cite>replacement</cite> is to                            set the cache replacement policy. User could either to pass a                           subclass of <cite>ReplacementPolicy</cite> or pass a string to specify                             the <cite>LRU</cite> or <cite>MRU</cite> policy. Default setting is <cite>LRU</cite>.</p>
+<p>hash(:func:, optional): <cite>hash</cite> is to provide the hash function that                             used to hash keys of the items. Default setting is to use                               python’s built-in hash function.</p>
+<p class="last">thread_safe_mode(bool, optional): when <cite>thread_safe_mode</cite> == True,                              means the class is thread safe, One thing must be noted is that                                 thread safe mode will have worse performance regrading of time                          since lock is costly. Default setting is True (enable thread safe                               mode).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Cache.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>key</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>delete is to delete the item which has the inputed key and value.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">key(key_type): <cite>key</cite> is the key of the item which is going to                           be deleted.</p>
+<p class="last">value(value_type): <cite>value</cite> is the value of the item which                               is going to be deleted.</p>
+</dd>
+<dt>Returns:</dt>
+<dd>if the value exist and be successfully deleted, return True; 
+if not successfully deleted, return False; otherwise return None.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Cache.get_offset_index">
+<code class="descname">get_offset_index</code><span class="sig-paren">(</span><em>hash_result</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache.get_offset_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_offset_index is to get the index offset (which slot in offset)              based on the hash result.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>hash_result(int): <cite>hash_result</cite> is the result of hash the key of                         the item.</dd>
+<dt>Returns:</dt>
+<dd>an int to indicate which index in the offset the item should be in.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Cache.get_set_num">
+<code class="descname">get_set_num</code><span class="sig-paren">(</span><em>hash_result</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache.get_set_num" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_set_num is to get the set number (which set) based on the hash              result.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>hash_result(int): <cite>hash_result</cite> is the result of hash the key of                                the item.</dd>
+<dt>Returns:</dt>
+<dd>an int to indicate which set the item should be in.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Cache.get_tag_num">
+<code class="descname">get_tag_num</code><span class="sig-paren">(</span><em>hash_result</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache.get_tag_num" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_tag_num is to get the tag number based on the hash result.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>hash_result(int): <cite>hash_result</cite> is the result of hash the key of                         the item.</dd>
+<dt>Returns:</dt>
+<dd>an int to indicate the tag of the item.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Cache.get_value">
+<code class="descname">get_value</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache.get_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_value is to get an item(a key and value pair) from the cache by             a key.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>key(key_type): <cite>key</cite> is the key of the item.</dd>
+<dt>Returns:</dt>
+<dd>if the value exist, return the value of the key. Otherwise                      return None.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Cache.is_valid_input">
+<code class="descname">is_valid_input</code><span class="sig-paren">(</span><em>cache_size</em>, <em>n_way</em>, <em>total_sets</em>, <em>offset_size</em>, <em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache.is_valid_input" title="Permalink to this definition">¶</a></dt>
+<dd><p>is_valid_input is to check if the values are valid.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">cache_size (int): <cite>cache_size</cite> is the cache size we can use to save                             items. if cache size == n, it means we can store at most n items.                               cache size should be larger than n_ways * number of sets                                * offset size.</p>
+<p>n_way(int): <cite>n_way</cite> is used to specify how many ways/lines in a                                 cache set.</p>
+<p>total_sets(int): <cite>total_sets</cite> is how many sets we should have.</p>
+<p>offset_size(int): <cite>offset_size</cite> is how large the offset should be                               according to <cite>b</cite>.</p>
+<p class="last">b(int): <cite>b</cite> is used to calculate offset size. offset size is 2^b.</p>
+</dd>
+<dt>Returns:</dt>
+<dd>True if the inputs are valid, False otherwise.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Cache.set_value">
+<code class="descname">set_value</code><span class="sig-paren">(</span><em>key</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Cache.set_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>set_value is to put an item(a key and value pair) into the cache.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">key(key_type): <cite>key</cite> is the key of the item.</p>
+<p class="last">value(value_type): <cite>value</cite> is the value of the item</p>
+</dd>
+<dt>Returns:</dt>
+<dd>True if successful, None otherwise.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cacheset">
+<h2>CacheSet<a class="headerlink" href="#cacheset" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cache.CacheSet">
+<em class="property">class </em><code class="descclassname">cache.</code><code class="descname">CacheSet</code><span class="sig-paren">(</span><em>n_way</em>, <em>offset_size</em>, <em>replacement='LRU'</em>, <em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>CacheSet class serves as a cache set in a cache to store cache  lines, and each cache line will store items (a key &amp; value pair).       A cache might have more than one cache sets.</p>
+<dl class="method">
+<dt id="cache.CacheSet.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>n_way</em>, <em>offset_size</em>, <em>replacement='LRU'</em>, <em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheSet.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The __init__ method of a cache is used to initialize a 
+cache set.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">n_way(int): <cite>n_way</cite> is used to specified how many ways(lines)                            in a cache set.</p>
+<p>offset_size(int): <cite>offset_size</cite> is used to set offset size.</p>
+<p>replacement(<a class="reference internal" href="#cache.ReplacementPolicy" title="cache.ReplacementPolicy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ReplacementPolicy</span></code></a>, optional): <cite>replacement</cite>                          is to set the cache replacement policy. User could either                               to pass a subclass of <cite>ReplacementPolicy</cite> or pass a string                              to specify the <cite>LRU</cite> or`MRU` policy. Default setting is <cite>LRU</cite>.</p>
+<p class="last">thread_safe_mode(bool, optional): when <cite>thread_safe_mode</cite> == True,                              means the class is thread safe, One thing must be noted is that                                 thread safe mode will have worse performance regrading of time                          since lock is costly. Default setting is True (enable thread                            safe mode).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheSet.delete_value">
+<code class="descname">delete_value</code><span class="sig-paren">(</span><em>tag</em>, <em>offset</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheSet.delete_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>delete_value is a function to delete the item in a cahce line which             has the inputed key(trasferred to tag and offset) and value.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">tag(int): <cite>tag</cite> is the tag of the hashed item key.</p>
+<p>offset(int): <cite>offset</cite> is the offset of the hashed item                          (in a cache line).</p>
+<p class="last">value(value_type): <cite>value</cite> is the value of the item which is going to                           be deleted.</p>
+</dd>
+<dt>Returns:</dt>
+<dd>if the value exist and be successfully deleted, return True; 
+if not successfully deleted, return False; otherwise return None.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheSet.get_line">
+<code class="descname">get_line</code><span class="sig-paren">(</span><em>tag</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheSet.get_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_line is a function to get a cache line which has the same tag.                      By design, each tag is unique in one cache set</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>tag(int): <cite>tag</cite> is the tag of the targeted cache line.</dd>
+<dt>Returns:</dt>
+<dd>if the line exist, return the line. Otherwise return None.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheSet.get_value">
+<code class="descname">get_value</code><span class="sig-paren">(</span><em>tag</em>, <em>offset</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheSet.get_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_value is a function to get an item(a key and value pair) from               the cache by a key(trasferred to tag and offset).</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">tag(int): <cite>tag</cite> is the tag of the hashed item key.</p>
+<p class="last">offset(int): <cite>offset</cite> is the offset of the hashed item (in a cache                               line).</p>
+</dd>
+<dt>Returns:</dt>
+<dd>if the value exist, return the value of the key. Otherwise                      return None.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheSet.set">
+<code class="descname">set</code><span class="sig-paren">(</span><em>value</em>, <em>tag</em>, <em>offset</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheSet.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>set is a function to put an item(a key and value pair) into the                 cache line in a cache set. items in replacement policy will be          updated accordingly. The hashed key is transferred to tag and           offset to be used to find the item in the cache line. set will          first go to find if there is any tag matches the tag of the key of              item we are going to put into, if so, we will directly find the                 offset and put the item (cache hit);if there is no matching tag,                then we will either fill the value into an empty cache line or evict            a cache line if there is no empty cache line(cache miss). Note, when             we evict a cache line, the whole line will be cleared and the tag               will be replace with the new tag of the item we are goint to put                into it.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">value(value_type): <cite>key</cite> is the key of the item.</p>
+<p>tag(int): <cite>tag</cite> is the tag of the hashed item key.</p>
+<p class="last">offset(int): <cite>offset</cite> is the offset of the hashed item.</p>
+</dd>
+<dt>Returns:</dt>
+<dd>True if successful, None otherwise.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cacheline">
+<h2>CacheLine<a class="headerlink" href="#cacheline" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cache.CacheLine">
+<em class="property">class </em><code class="descclassname">cache.</code><code class="descname">CacheLine</code><span class="sig-paren">(</span><em>offset_size</em>, <em>tag=None</em>, <em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>CacheLine class serves as a cache line in the cache.</p>
+<dl class="method">
+<dt id="cache.CacheLine.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>offset_size</em>, <em>tag=None</em>, <em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The __init__ method of a cache is used to initialize a cache line.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">offset_size(int): <cite>offset_size</cite> is used to set the offset size in                               a cache line.</p>
+<p>tag(int, optional): <cite>tag</cite> is the tag of a line. When the line is                                empty, it is set to be None. Default value is None.</p>
+<p class="last">thread_safe_mode(bool, optional): when <cite>thread_safe_mode</cite> == True,                              means the class is thread safe, One thing must be noted is that                                 thread safe mode will have worse performance regrading of time                          since lock is costly. Default setting is True (enable thread                            safe mode).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheLine.clearline">
+<code class="descname">clearline</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine.clearline" title="Permalink to this definition">¶</a></dt>
+<dd><p>clearline is a function to clear the whole line.                It is handy when the whole line is needed to be evicted.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheLine.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>offset_index</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>delete is to delete the item which in the offset index and match the             value.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">offset_index(int): <cite>offset_index</cite> is the index of the cache line                                offset where the item shoule be located at.</p>
+<p class="last">value(value_type): <cite>value</cite> is the value of the item which is going to be                                deleted.</p>
+</dd>
+<dt>Returns:</dt>
+<dd>if the value exist and be successfully deleted, and if the line                         become an empty line, then it also will needed remove from the LRU                      replacer, so return the tag of it; if the line isn’t empty, then                        return None. if not successfully deleted, return False.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheLine.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>offset_index</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>get is to get an item(a key and value pair) from the cache line.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>offset_index(int): <cite>offset_index</cite> is the index of the cache line                                offset where the item will be get from.</dd>
+<dt>Returns:</dt>
+<dd>if the value exist, return the value of the key. Otherwise raise                         an error.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheLine.get_tag">
+<code class="descname">get_tag</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine.get_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_tag is a function to get the tag of the current cache line.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>return the tag of the current cache line .</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheLine.match_tag">
+<code class="descname">match_tag</code><span class="sig-paren">(</span><em>tag</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine.match_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>match_tag is a function to see if a tag is the same as the tag of the           current cache line.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>tag(int): <cite>tag</cite> is the tag of a line.</dd>
+<dt>Returns:</dt>
+<dd>return True if a tag is the same as the tag of the current cache line.                  False Otherwise.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheLine.set">
+<code class="descname">set</code><span class="sig-paren">(</span><em>offset_index</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>set is to put an item(a key and value pair) into the cache line.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">offset_index(int): <cite>offset_index</cite> is the index of the cache line offset                                 where the item will be put into.</p>
+<p class="last">value(value_type): <cite>value</cite> is the value of the item</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.CacheLine.set_tag">
+<code class="descname">set_tag</code><span class="sig-paren">(</span><em>tag</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.CacheLine.set_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>set_tag is a function to set tag of the current cache line.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>tag(int): <cite>tag</cite> is the tag of a line.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="replacementpolicy">
+<h2>ReplacementPolicy<a class="headerlink" href="#replacementpolicy" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cache.ReplacementPolicy">
+<em class="property">class </em><code class="descclassname">cache.</code><code class="descname">ReplacementPolicy</code><a class="headerlink" href="#cache.ReplacementPolicy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>ReplacementPolicy class is an interface to allow user to        inherit and implement their own replacement policy.</p>
+<dl class="method">
+<dt id="cache.ReplacementPolicy.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>tag</em>, <em>delete_result</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.ReplacementPolicy.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>delete is a function to update the replacement policy object            after a value is ask to be deleted from a cache line. delete            counts as an access, so the replacement policy needed to be             updated too. If the line doesn’t become empty, we update the            order; if the line is empty then delete the whole line from             replacement policy.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">tag(int): <cite>tag</cite> is the tag of the cache line.</p>
+<p class="last">delete_result(bool): <cite>delete_result</cite> is value we got after delete a                             value from the cache line. None means the line is non-empty                             after delete, True means the line became an empty line.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.ReplacementPolicy.get_size">
+<code class="descname">get_size</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.ReplacementPolicy.get_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_size is a function to get the number of the items/cache             lines in this object.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>an int value of the size of the linked list and the hash table.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.ReplacementPolicy.insert">
+<code class="descname">insert</code><span class="sig-paren">(</span><em>tag</em>, <em>cache_line_index</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.ReplacementPolicy.insert" title="Permalink to this definition">¶</a></dt>
+<dd><p>insert is a function to call when one item is accessed by user.                 When an item is accessed by users, we need to update the order of               cahce lines (put it into the end of the linked list). If the            item/cache line is not accessed before, we need to both update          the list and the hash table.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">tag(int): <cite>tag</cite> is the tag of the line.</p>
+<p class="last">cache_line_index(int): <cite>cache_line_index</cite> is the index of the line.                             i.e. the index of the line in the cache set.                            It will be used to find the line faster when we need to                                 evict/update the line.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.ReplacementPolicy.victim">
+<code class="descname">victim</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.ReplacementPolicy.victim" title="Permalink to this definition">¶</a></dt>
+<dd><p>victim is a function to choose the victim cache line to evict           based on current replacement policy.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Return a tag and index i of the victim cache line.                      If there is no item in the linked list/hash table, return None.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="lru-mru-default-replacementpolicy">
+<h2>LRU_MRU (default ReplacementPolicy)<a class="headerlink" href="#lru-mru-default-replacementpolicy" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cache.LRU_MRU">
+<em class="property">class </em><code class="descclassname">cache.</code><code class="descname">LRU_MRU</code><span class="sig-paren">(</span><em>policy='LRU'</em>, <em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.LRU_MRU" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cache.ReplacementPolicy" title="cache.ReplacementPolicy"><code class="xref py py-class docutils literal notranslate"><span class="pre">cache.ReplacementPolicy</span></code></a></p>
+<p>LRU_MRU class keep the accessed order and quick get the cache lines for         the needs of LRU/MRU policy.</p>
+<dl class="method">
+<dt id="cache.LRU_MRU.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>policy='LRU'</em>, <em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.LRU_MRU.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The __init__ method of a LRU/MRU replacement policy is used to          initialize a LRU/MRU object. Default policy is LRU.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">policy(string, optional): <cite>policy</cite> is to set the replacement policy.                            User could pass a string to specify the <cite>LRU</cite> or <cite>MRU</cite> policy                           will be used. Default setting is <cite>LRU</cite>.</p>
+<p class="last">thread_safe_mode(bool, optional): when <cite>thread_safe_mode</cite> == True,                              means the class is thread safe, One thing must be noted is that                                 thread safe mode will have worse performance regrading of time                          since lock is costly. Default setting is True (enable thread                            safe mode).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.LRU_MRU.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>tag</em>, <em>delete_result</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.LRU_MRU.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>delete is a function to update the replacement policy object after              a value is ask to be deleted from a cache line. delete counts as an             access, so the replacement policy needed to be update too. If the               line doesn’t become empty, we update the order; if the line is          empty then delete the whole line from replacement policy.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">tag(int): <cite>tag</cite> is the tag of the cache line.</p>
+<p class="last">delete_result(bool): <cite>delete_result</cite> is value we got after                              delete a value from the cache line. None means the line                                 is non-empty after delete, True means the line became an                                empty line.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.LRU_MRU.get_size">
+<code class="descname">get_size</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.LRU_MRU.get_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_size is a function to get the number of the items/cache lines               in this object.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>an int value of the size of the linked list and the hash table.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.LRU_MRU.insert">
+<code class="descname">insert</code><span class="sig-paren">(</span><em>tag</em>, <em>i=0</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.LRU_MRU.insert" title="Permalink to this definition">¶</a></dt>
+<dd><p>insert is a function to call when one item is accessed by user.                 When an item is accessed by users, we need to update the order of               cahce lines (put it into the end of the linked list).           If the item/cache line is not accessed before, we need to both update           the list and the hash table.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">tag(int): <cite>tag</cite> is the tag of the line.</p>
+<p class="last">i(int, optional): <cite>i</cite> the index of the line. i.e. the index of                          the line in the cache set. It will be used to find the line                             faster when we need to evict/update the line.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.LRU_MRU.victim">
+<code class="descname">victim</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.LRU_MRU.victim" title="Permalink to this definition">¶</a></dt>
+<dd><p>victim is a function to choose the victim cache line to evict           based on current replacement policy.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Return a tag and index i of the victim cache line.                      If there is no item in the linked list/hash table, return None.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="node">
+<h2>Node<a class="headerlink" href="#node" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cache.Node">
+<em class="property">class </em><code class="descclassname">cache.</code><code class="descname">Node</code><span class="sig-paren">(</span><em>tag</em>, <em>index</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Node class is a node used in implementation of doubly linked list.</p>
+<dl class="method">
+<dt id="cache.Node.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>tag</em>, <em>index</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Node.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The __init__ method of a Node is used to initialize a Node.                     Here, a node represent a cache line and used to decide the evict                        order of cache lines.</p>
+<p>tag(int): the tag of the cache line the node represents.</p>
+<p>index(int): the index of the cache line in the cache set.</p>
+<p>prev(node): the previous node of the current node.</p>
+<p>next(node): the next node of the current node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Node.get_index">
+<code class="descname">get_index</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.Node.get_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_index is a function to get the cache line index of the current              node.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>return a cache line index of the current node.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Node.get_next">
+<code class="descname">get_next</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.Node.get_next" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_next is a function to get the next node of the current node.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>return a node which is the next node of the current node.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Node.get_prev">
+<code class="descname">get_prev</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.Node.get_prev" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_prev is a function to get the previous node of the current node.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>return a node which is the previous node of the current node.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Node.get_tag">
+<code class="descname">get_tag</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.Node.get_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_tag is a function to get the cache line tag of the current node.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>return a cache line tag of the current node.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Node.set_next">
+<code class="descname">set_next</code><span class="sig-paren">(</span><em>next</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Node.set_next" title="Permalink to this definition">¶</a></dt>
+<dd><p>set_next is a function to set the next node of the current node.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>next(<a class="reference internal" href="#cache.Node" title="cache.Node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a>): <cite>next</cite> is the node that will be the next node of the                         current node.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.Node.set_prev">
+<code class="descname">set_prev</code><span class="sig-paren">(</span><em>prev</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.Node.set_prev" title="Permalink to this definition">¶</a></dt>
+<dd><p>set_prev is a function to set the previous node of the current node.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>prev(<a class="reference internal" href="#cache.Node" title="cache.Node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a>): <cite>prev</cite> is the node that will be the previous node of                         the current node.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="doublylinkedlist">
+<h2>DoublyLinkedList<a class="headerlink" href="#doublylinkedlist" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cache.DoublyLinkedList">
+<em class="property">class </em><code class="descclassname">cache.</code><code class="descname">DoublyLinkedList</code><span class="sig-paren">(</span><em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.DoublyLinkedList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>DoublyLinkedList class is a doubly linkedlist used in implementation    of LRU/MRU policy.</p>
+<dl class="method">
+<dt id="cache.DoublyLinkedList.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>thread_safe_mode=True</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.DoublyLinkedList.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The __init__ method of a DoublyLinkedList is used to initialize a               doubly linked list.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>thread_safe_mode(bool, optional): when <cite>thread_safe_mode</cite> == True,                              means the class is thread safe, One thing must be noted is that                                 thread safe mode will have worse performance regrading of time                          since lock is costly. Default setting is True (enable thread                            safe mode).</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.DoublyLinkedList.get_head">
+<code class="descname">get_head</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.DoublyLinkedList.get_head" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_head is a function to get the head of the linked list.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>an node which is head of the linked list.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.DoublyLinkedList.get_tail">
+<code class="descname">get_tail</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cache.DoublyLinkedList.get_tail" title="Permalink to this definition">¶</a></dt>
+<dd><p>get_tail is a function to get the tail of the linked list.</p>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>an node which is tail of the linked list.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.DoublyLinkedList.insert">
+<code class="descname">insert</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.DoublyLinkedList.insert" title="Permalink to this definition">¶</a></dt>
+<dd><p>insert is a function to insert a node into the tail of the              doubly linked list.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>node(<a class="reference internal" href="#cache.Node" title="cache.Node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a>): <cite>node</cite> is the node that will be inserted into the list.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="cache.DoublyLinkedList.remove">
+<code class="descname">remove</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#cache.DoublyLinkedList.remove" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove is a function to remove a node from the list.</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>node(<a class="reference internal" href="#cache.Node" title="cache.Node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a>):<cite>node</cite> is the node that will be removed from the list.</dd>
+<dt>Returns:</dt>
+<dd>return True when operation is done as expected, False otherwise.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">N-way Set-associative Cache</a><ul>
+<li><a class="reference internal" href="#overview-of-classes">Overview of Classes</a></li>
+<li><a class="reference internal" href="#cache">Cache</a></li>
+<li><a class="reference internal" href="#cacheset">CacheSet</a></li>
+<li><a class="reference internal" href="#cacheline">CacheLine</a></li>
+<li><a class="reference internal" href="#replacementpolicy">ReplacementPolicy</a></li>
+<li><a class="reference internal" href="#lru-mru-default-replacementpolicy">LRU_MRU (default ReplacementPolicy)</a></li>
+<li><a class="reference internal" href="#node">Node</a></li>
+<li><a class="reference internal" href="#doublylinkedlist">DoublyLinkedList</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">N-Way Associative Cache  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Jade Chang.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.
+    </div>
+  </body>
+</html>
